@@ -74,19 +74,21 @@ PyObject *BasicAuthException_class;
 PyObject *PwdChangeException_class;
 PyObject *GssException_class;
 
-static PyObject *checkPassword(PyObject *self, PyObject *args)
+static PyObject *checkPassword(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     const char *user = NULL;
     const char *pswd = NULL;
     const char *service = NULL;
     const char *default_realm = NULL;
+    int renew_life = 0;
+    static char *kwlist[] = {"user", "password", "service", "realm", "renew_limit", NULL};
     int result = 0;
 
-    if (! PyArg_ParseTuple(args, "ssss", &user, &pswd, &service, &default_realm)) {
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ssss|i", kwlist, &user, &pswd, &service, &default_realm, &renew_life)) {
         return NULL;
     }
 
-    result = authenticate_user_krb5pwd(user, pswd, service, default_realm);
+    result = authenticate_user_krb5pwd(user, pswd, service, default_realm, renew_life);
 
     if (result) {
         return Py_INCREF(Py_True), Py_True;
@@ -95,6 +97,29 @@ static PyObject *checkPassword(PyObject *self, PyObject *args)
     }
 }
 
+static PyObject *renewCredentials(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    const char *user = NULL;
+    const char *service = NULL;
+    const char *default_realm = NULL;
+    static char *kwlist[] = {"user", "service", "realm", NULL};
+    int result = 0;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "sss", kwlist, &user, &service, &default_realm)) {
+        return NULL;
+    }
+
+    result = renew_ticket_krb5(user, service, default_realm);
+
+    if (result) {
+        return Py_INCREF(Py_True), Py_True;
+    } else {
+        return NULL;
+    }
+}
+
+// TODO change_user_krb5pwd has separate implementations of some functions from kerberosbasic
+// merge them together somehow rather than keeping 2 versions of basically the same stuff
 static PyObject *changePassword(PyObject *self, PyObject *args)
 {
     const char *newpswd = NULL;
@@ -714,8 +739,13 @@ static PyObject *authGSSServerTargetName(PyObject *self, PyObject *args)
 static PyMethodDef KerberosMethods[] = {
     {
         "checkPassword",
-        checkPassword, METH_VARARGS,
+        (PyCFunction)checkPassword, METH_VARARGS | METH_KEYWORDS,
         "Check the supplied user/password against Kerberos KDC."
+    },
+    {
+        "renewCredentials",
+        (PyCFunction)renewCredentials, METH_VARARGS | METH_KEYWORDS,
+        "Renew Kerberos ticket for the supplied context." // TODO
     },
     {
         "changePassword",
