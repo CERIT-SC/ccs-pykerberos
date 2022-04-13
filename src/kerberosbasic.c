@@ -17,6 +17,7 @@
 #include <Python.h>
 #include "kerberosbasic.h"
 
+#include <krb5/krb5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,14 +29,14 @@ static void set_basicauth_error(krb5_context context, krb5_error_code code);
 
 static krb5_error_code verify_krb5_user(
     krb5_context context, krb5_principal principal, const char *password,
-    krb5_principal server, int renew_life
+    krb5_principal server, int ticket_life, int renew_life
 );
 
 static int set_cc_env_var(const char *name, krb5_context context, krb5_ccache *out_cc);
 
 int authenticate_user_krb5pwd(
     const char *user, const char *pswd, const char *service,
-    const char *default_realm, int renew_life
+    const char *default_realm, int ticket_life, int renew_life
 ) {
     krb5_context    kcontext = NULL;
     krb5_error_code code;
@@ -98,7 +99,7 @@ int authenticate_user_krb5pwd(
         goto end;
     }
 
-    code = verify_krb5_user(kcontext, client, pswd, server, renew_life);
+    code = verify_krb5_user(kcontext, client, pswd, server, ticket_life, renew_life);
 
     if (code) {
         ret = 0;
@@ -236,7 +237,7 @@ end:
 /* Inspired by krb5_verify_user from Heimdal */
 static krb5_error_code verify_krb5_user(
     krb5_context context, krb5_principal principal, const char *password,
-    krb5_principal server, int renew_life
+    krb5_principal server, int ticket_life, int renew_life
 ) {
     krb5_creds creds;
     krb5_get_init_creds_opt *gic_options;
@@ -265,6 +266,7 @@ static krb5_error_code verify_krb5_user(
         goto end;
     }
 
+    krb5_get_init_creds_opt_set_tkt_life(gic_options, ticket_life);
     krb5_get_init_creds_opt_set_renew_life(gic_options, renew_life);
     ret = krb5_get_init_creds_opt_set_out_ccache(context, gic_options, out_cc);
     if (ret) {

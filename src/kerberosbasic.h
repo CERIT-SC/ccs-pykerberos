@@ -22,7 +22,7 @@
 
 int authenticate_user_krb5pwd(
     const char *user, const char *pswd, const char *service,
-    const char *default_realm, int renew_life
+    const char *default_realm, int ticket_life, int renew_life
 );
 
 int renew_ticket_krb5(

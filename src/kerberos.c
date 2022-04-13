@@ -80,15 +80,16 @@ static PyObject *checkPassword(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *pswd = NULL;
     const char *service = NULL;
     const char *default_realm = NULL;
+    int ticket_life = 0;
     int renew_life = 0;
-    static char *kwlist[] = {"user", "password", "service", "realm", "renew_limit", NULL};
+    static char *kwlist[] = {"user", "password", "service", "realm", "ticket_life", "renew_life", NULL};
     int result = 0;
 
-    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ssss|i", kwlist, &user, &pswd, &service, &default_realm, &renew_life)) {
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ssss|ii", kwlist, &user, &pswd, &service, &default_realm, &ticket_life, &renew_life)) {
         return NULL;
     }
 
-    result = authenticate_user_krb5pwd(user, pswd, service, default_realm, renew_life);
+    result = authenticate_user_krb5pwd(user, pswd, service, default_realm, ticket_life, renew_life);
 
     if (result) {
         return Py_INCREF(Py_True), Py_True;
