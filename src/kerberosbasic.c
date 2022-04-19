@@ -136,6 +136,7 @@ int renew_ticket_krb5(
     krb5_error_code code;
     krb5_principal  client = NULL;
     krb5_principal  server = NULL;
+    krb5_ccache     mcc = NULL;
     int             ret = 0;
     char            *name = NULL;
     char            *p = NULL;
@@ -193,23 +194,38 @@ int renew_ticket_krb5(
         goto end;
     }
 
-    krb5_ccache in_cc = NULL;
-    set_cc_env_var(name, kcontext, &in_cc);
+    krb5_ccache out_cc = NULL;
+    set_cc_env_var(name, kcontext, &out_cc);
 
     krb5_creds new_creds;
-    ret = krb5_get_renewed_creds(kcontext, &new_creds, client, in_cc, NULL);
+    ret = krb5_get_renewed_creds(kcontext, &new_creds, client, out_cc, NULL);
     if (ret) {
         set_basicauth_error(kcontext, ret);
         ret = 0;
         goto end;
     }
 
-    ret = krb5_cc_store_cred(kcontext, in_cc, &new_creds);
-
+    ret = krb5_cc_new_unique(kcontext, "MEMORY", NULL, &mcc);
+    if (!ret)
+        ret = krb5_cc_initialize(kcontext, mcc, client);
     if (ret) {
-        ret = 0;
+        set_basicauth_error(kcontext, ret);
         goto end;
     }
+
+    // not ideal, in kinit they have a special function k5_cc_store_primary_cred, but that is not in include files,
+    // so we're just using store_cred
+    ret = krb5_cc_store_cred(kcontext, mcc, &new_creds);
+    if (ret) {
+        set_basicauth_error(kcontext, ret);
+        goto end;
+    }
+    ret = krb5_cc_move(kcontext, mcc, out_cc);
+    if (ret) {
+        set_basicauth_error(kcontext, ret);
+        goto end;
+    }
+    mcc = NULL;
 
     ret = 1;
 
