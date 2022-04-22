@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <time.h>
 
 #undef PRINTFS
 
@@ -140,6 +142,9 @@ int renew_ticket_krb5(
     int             ret = 0;
     char            *name = NULL;
     char            *p = NULL;
+    int             now = time(0);
+    krb5_cc_cursor  cur;
+    bool            valid_cred = false;
 
     code = krb5_init_context(&kcontext);
     if (code)
@@ -197,9 +202,32 @@ int renew_ticket_krb5(
     krb5_ccache out_cc = NULL;
     set_cc_env_var(name, kcontext, &out_cc);
 
+    if ((ret = krb5_cc_start_seq_get(kcontext, out_cc, &cur)) != 0) {
+        set_basicauth_error(kcontext, ret);
+        ret = 0;
+        goto end;
+    }
+
+    krb5_creds old_creds;
+    while ((ret = krb5_cc_next_cred(kcontext, out_cc, &cur, &old_creds)) == 0) {
+        if(old_creds.times.endtime > now) {
+            valid_cred = true;
+            break;
+        }
+    }
+
+    if((ret = krb5_cc_end_seq_get(kcontext, out_cc, &cur)) != 0) {
+        set_basicauth_error(kcontext, ret);
+        goto end;
+    }
+
     krb5_creds new_creds;
     ret = krb5_get_renewed_creds(kcontext, &new_creds, client, out_cc, NULL);
     if (ret) {
+        if(valid_cred) {
+            ret = 1;
+            goto end;
+        }
         set_basicauth_error(kcontext, ret);
         ret = 0;
         goto end;
@@ -210,6 +238,7 @@ int renew_ticket_krb5(
         ret = krb5_cc_initialize(kcontext, mcc, client);
     if (ret) {
         set_basicauth_error(kcontext, ret);
+        ret = 0;
         goto end;
     }
 
@@ -218,11 +247,13 @@ int renew_ticket_krb5(
     ret = krb5_cc_store_cred(kcontext, mcc, &new_creds);
     if (ret) {
         set_basicauth_error(kcontext, ret);
+        ret = 0;
         goto end;
     }
     ret = krb5_cc_move(kcontext, mcc, out_cc);
     if (ret) {
         set_basicauth_error(kcontext, ret);
+        ret = 0;
         goto end;
     }
     mcc = NULL;
