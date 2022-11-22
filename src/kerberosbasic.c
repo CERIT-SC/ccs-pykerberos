@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#undef PRINTFS
+#define PRINTFS 1
 
 extern PyObject *BasicAuthException_class;
 static void set_basicauth_error(krb5_context context, krb5_error_code code);
