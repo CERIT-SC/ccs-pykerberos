@@ -203,6 +203,8 @@ int renew_ticket_krb5(
 
     krb5_ccache out_cc = NULL;
     set_cc_env_var(name, kcontext, &out_cc);
+    
+    printf("cache name: %s\n", krb5_cc_get_name(kcontext, out_cc));
 
     if ((ret = krb5_cc_start_seq_get(kcontext, out_cc, &cur)) != 0) {
         set_basicauth_error(kcontext, ret);
