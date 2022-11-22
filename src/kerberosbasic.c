@@ -297,6 +297,8 @@ static krb5_error_code verify_krb5_user(
     krb5_error_code ret;
     char *name = NULL;
     krb5_ccache out_cc = NULL;
+    
+    printf("verify_krb5_user: ticket_life: %d, renew_life: %d\n", ticket_life, renew_life);
 
     memset(&creds, 0, sizeof(creds));
 
