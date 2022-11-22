@@ -193,6 +193,7 @@ int renew_ticket_krb5(
         snprintf(name, 256, "%s", user);
     }
 
+    printf("Have name: %s\n", name);
     code = krb5_parse_name(kcontext, name, &client);
     if (code) {
         set_basicauth_error(kcontext, code);
@@ -205,6 +206,7 @@ int renew_ticket_krb5(
 
     if ((ret = krb5_cc_start_seq_get(kcontext, out_cc, &cur)) != 0) {
         set_basicauth_error(kcontext, ret);
+        printf("start seq get failed\n");
         ret = 0;
         goto end;
     }
@@ -225,6 +227,7 @@ int renew_ticket_krb5(
     krb5_creds new_creds;
     ret = krb5_get_renewed_creds(kcontext, &new_creds, client, out_cc, NULL);
     if (ret) {
+        printf("get renewed creds failed\n");
         if(valid_cred) {
             ret = 1;
             goto end;
@@ -346,6 +349,7 @@ static krb5_error_code verify_krb5_user(
     }
 
 end:
+    printf("verify_krb5_user finished with %d\n", ret);
     krb5_get_init_creds_opt_free(context, gic_options);
     krb5_free_cred_contents(context, &creds);
 
