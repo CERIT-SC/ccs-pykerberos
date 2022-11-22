@@ -346,7 +346,7 @@ static krb5_error_code verify_krb5_user(
     }
 
 end:
-    krb5_get_init_creds_opt_free(context, git_options);
+    krb5_get_init_creds_opt_free(context, gic_options);
     krb5_free_cred_contents(context, &creds);
 
     return ret;
