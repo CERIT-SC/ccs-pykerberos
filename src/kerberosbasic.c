@@ -35,6 +35,7 @@ static krb5_error_code verify_krb5_user(
 );
 
 static int set_cc_env_var(const char *name, krb5_context context, krb5_ccache *out_cc);
+static krb5_preauthtype preauth[] = { KRB5_PADATA_ENC_TIMESTAMP };
 
 int authenticate_user_krb5pwd(
     const char *user, const char *pswd, const char *service,
@@ -319,7 +320,8 @@ static krb5_error_code verify_krb5_user(
     if (ret) {
         set_basicauth_error(context, ret);
         goto end;
-    }
+    }    
+    krb5_get_init_creds_opt_set_preauth_list(gic_options, preauth, sizeof(preauth)/sizeof(krb5_preauthtype));
 
     ret = krb5_get_init_creds_password(
         context, &creds, principal, (char *)password,
@@ -344,6 +346,7 @@ static krb5_error_code verify_krb5_user(
     }
 
 end:
+    krb5_get_init_creds_opt_free(context, git_options);
     krb5_free_cred_contents(context, &creds);
 
     return ret;
