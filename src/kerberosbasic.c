@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define PRINTFS 1
+#undef PRINTFS
 
 extern PyObject *BasicAuthException_class;
 static void set_basicauth_error(krb5_context context, krb5_error_code code);
@@ -192,8 +192,9 @@ int renew_ticket_krb5(
     } else {
         snprintf(name, 256, "%s", user);
     }
-
+#ifdef PRINTFS
     printf("Have name: %s\n", name);
+#endif
     code = krb5_parse_name(kcontext, name, &client);
     if (code) {
         set_basicauth_error(kcontext, code);
@@ -203,12 +204,16 @@ int renew_ticket_krb5(
 
     krb5_ccache out_cc = NULL;
     set_cc_env_var(name, kcontext, &out_cc);
-    
+
+#ifdef PRINTFS
     printf("cache name: %s\n", krb5_cc_get_name(kcontext, out_cc));
+#endif    
 
     if ((ret = krb5_cc_start_seq_get(kcontext, out_cc, &cur)) != 0) {
         set_basicauth_error(kcontext, ret);
+#ifdef PRINTFS        
         printf("start seq get failed\n");
+#endif        
         ret = 0;
         goto end;
     }
@@ -229,7 +234,9 @@ int renew_ticket_krb5(
     krb5_creds new_creds;
     ret = krb5_get_renewed_creds(kcontext, &new_creds, client, out_cc, NULL);
     if (ret) {
+#ifdef PRINTFS    
         printf("get renewed creds failed\n");
+#endif        
         if(valid_cred) {
             ret = 1;
             goto end;
@@ -297,8 +304,9 @@ static krb5_error_code verify_krb5_user(
     krb5_error_code ret;
     char *name = NULL;
     krb5_ccache out_cc = NULL;
-    
+#ifdef PRINTFS    
     printf("verify_krb5_user: ticket_life: %d, renew_life: %d\n", ticket_life, renew_life);
+#endif    
 
     memset(&creds, 0, sizeof(creds));
 
@@ -353,7 +361,9 @@ static krb5_error_code verify_krb5_user(
     }
 
 end:
+#ifdef PRINTFS
     printf("verify_krb5_user finished with %d\n", ret);
+#endif    
     krb5_get_init_creds_opt_free(context, gic_options);
     krb5_free_cred_contents(context, &creds);
 
